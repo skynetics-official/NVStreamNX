@@ -45,6 +45,11 @@ jobs:
       - name: Configure
         run: cmake -B build/switch -G Ninja
 
+      # Сначала собираем WebRTC-зависимости (libsrtp2, mbedtls, cjson, usrsctp):
+      # без них ninja не находит libsrtp2.a и падает до начала компиляции.
+      - name: Build WebRTC dependencies
+        run: cmake --build build/switch --target cjson mbedtls srtp2 usrsctp -j"$(nproc)"
+
       - name: Build
         run: cmake --build build/switch --target NVStreamNX.nro -j"$(nproc)"
 

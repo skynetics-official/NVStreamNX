@@ -22,7 +22,7 @@ jobs:
       - name: Install build tools
         run: |
           apt-get update
-          apt-get install -y --no-install-recommends cmake ninja-build pkg-config unzip curl ca-certificates git
+          apt-get install -y --no-install-recommends cmake ninja-build pkg-config unzip curl ca-certificates git perl python3 python3-jinja2 python3-jsonschema
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -41,6 +41,13 @@ jobs:
           mv "SwitchNOW-${UPSTREAM_SHA}/extern" extern
           rm -rf upstream.zip "SwitchNOW-${UPSTREAM_SHA}"
           ls extern
+
+      # В mbedtls 3.4 из git нет сгенерированных файлов (error.c и др.).
+      # Включаем их генерацию (нужны perl и python3-jinja2/jsonschema).
+      - name: Enable mbedtls source generation
+        run: |
+          sed -i 's/-DENABLE_PROGRAMS=off/-DENABLE_PROGRAMS=off -DGEN_FILES=ON/' extern/libpeer/CMakeLists.txt
+          grep -n "GEN_FILES" extern/libpeer/CMakeLists.txt
 
       - name: Configure
         run: cmake -B build/switch -G Ninja

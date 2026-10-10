@@ -1,4 +1,4 @@
-name: Build Switch NRO
+name: Build NVStreamNX NRO
 
 on:
   push:
@@ -18,7 +18,7 @@ jobs:
       - name: Install Switch dependencies
         run: |
           dkp-pacman -Syyu --noconfirm
-          dkp-pacman -S --noconfirm switch-tools switch-sdl2 switch-libnx switch-fmt switch-mbedtls switch-curl switch-json-c
+          dkp-pacman -S --noconfirm switch-tools switch-sdl2 switch-libnx switch-fmt switch-mbedtls switch-curl switch-json-c switch-borealis
 
       - name: Build Project
         run: |

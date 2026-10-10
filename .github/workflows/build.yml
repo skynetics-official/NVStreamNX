@@ -1,0 +1,63 @@
+name: Build NVStreamNX NRO
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+env:
+  # Тяжёлые зависимости (Borealis, libpeer, FFmpeg с NVDEC) берутся из исходного
+  # проекта SwitchNOW строго на этом коммите, чтобы сборка была воспроизводимой.
+  UPSTREAM_REPO: Blade-Punisher/SwitchNOW
+  UPSTREAM_SHA: 98af68e9189af3ad604c5290e32f9254c61ebdbd
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: devkitpro/devkita64:latest
+
+    steps:
+      - name: Install build tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends cmake ninja-build pkg-config unzip curl ca-certificates git
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Switch libraries
+        run: |
+          dkp-pacman -Sy --noconfirm || true
+          for p in libnx deko3d uam switch-pkg-config switch-curl switch-jansson switch-zlib switch-bzip2; do
+            dkp-pacman -S --needed --noconfirm "$p" || echo "::warning::package $p was not installed"
+          done
+
+      - name: Fetch third-party sources (extern/)
+        run: |
+          curl -fsSL "https://codeload.github.com/${UPSTREAM_REPO}/zip/${UPSTREAM_SHA}" -o upstream.zip
+          unzip -q upstream.zip
+          mv "SwitchNOW-${UPSTREAM_SHA}/extern" extern
+          rm -rf upstream.zip "SwitchNOW-${UPSTREAM_SHA}"
+          ls extern
+
+      - name: Configure
+        run: cmake -B build/switch -G Ninja
+
+      - name: Build
+        run: cmake --build build/switch --target NVStreamNX.nro -j"$(nproc)"
+
+      - name: Verify NRO
+        run: |
+          ls -l build/switch/NVStreamNX.nro
+          magic="$(dd if=build/switch/NVStreamNX.nro bs=1 skip=16 count=4 2>/dev/null)"
+          echo "NRO magic: $magic"
+          [ "$magic" = "NRO0" ]
+
+      - name: Upload NRO Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NVStreamNX-NRO
+          path: build/switch/NVStreamNX.nro
+          if-no-files-found: error
